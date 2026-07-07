@@ -8,7 +8,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Ragedoll">
 <link rel="manifest" href="manifest.json">
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect fill='%23ffd23f' width='192' height='192'/><text x='50%' y='50%' font-size='100' font-weight='bold' text-anchor='middle' dominant-baseline='middle' fill='%23141210'>👊</text></svg>">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect fill='%23ffd23f' width='192' height='192'/><text x='50%' y='50%' font-size='100' font-weight='bold' text-anchor='middle' dominant-baseline='middle' fill='%23141210'>🦹</text></svg>">
 <title>Jan Boi's Ragedoll</title>
 <style>
   :root{ --ink:#141210; --paper:#f2e9d8; --panel:#fbf5e6;
@@ -348,8 +348,8 @@ Events.on(engine,'beforeUpdate',()=>{
   if(!doll||!doll.chest) return;
   const c=doll.chest,h=doll.head,hp=doll.hips;
   const speed=Math.hypot(c.velocity.x,c.velocity.y);
-  if(h.position.y < hp.position.y-20 && speed<2.2){
-    for(const b of [c,h,hp]){ Body.setAngle(b,b.angle*0.85); Body.setAngularVelocity(b,b.angularVelocity*0.5); }
+  if(h.position.y < hp.position.y-20 && speed<4){
+    for(const b of [c,h,hp]){ Body.setAngle(b,b.angle*0.92); Body.setAngularVelocity(b,b.angularVelocity*0.5); }
     for(const b of doll.parts) Body.setVelocity(b,{x:b.velocity.x*0.7,y:b.velocity.y});
   }
 });
