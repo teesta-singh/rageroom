@@ -425,7 +425,7 @@ function hitSound(power){ if(muted) return; thwack(power); playClip(AUDIO.impact
 document.getElementById('mute').onclick=function(){ muted=!muted;
   this.setAttribute('aria-pressed',muted); this.textContent=muted?'🔇 Muted':'🔊 Sound'; };
 
-const words=['BKL!','MADAR!','CHU!','BSDK!','Bhen ki!','LODU!'];
+const words=['BKL!','MADAR!','CHU!','BSDK!','Bhen ki!','LODU!', 'GANDU!'];
 function burst(x,y,power){ const el=document.createElement('div'); el.className='burst';
   el.textContent=words[Math.random()*words.length|0];
   el.style.setProperty('--r',(Math.random()*30-15)+'deg');
