@@ -1,0 +1,673 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta name="theme-color" content="#ff2e4d">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Ragedoll">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect fill='%23ffd23f' width='192' height='192'/><text x='50%' y='50%' font-size='100' font-weight='bold' text-anchor='middle' dominant-baseline='middle' fill='%23141210'>👊</text></svg>">
+<title>Jan Boi's Ragedoll</title>
+<style>
+  :root{ --ink:#141210; --paper:#f2e9d8; --panel:#fbf5e6;
+    --hit:#ff2e4d; --hit2:#ffd23f; --line:#141210;
+    --p0:#0d0a17; --p1:#1a1330; --p2:#261d47; --p3:#3a2c63; --p4:#584487; --p5:#7a68a3; }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{margin:0; height:100%; background:var(--p0); overflow:hidden;
+    font-family:"Arial Black","Helvetica Neue",Impact,sans-serif; color:var(--ink);}
+  #stage{position:fixed; inset:0; touch-action:none;}
+  canvas{display:block; background:transparent !important;}
+  #bg{position:fixed; inset:0; z-index:-2;
+    background:linear-gradient(180deg, var(--p0) 0%, var(--p1) 55%, var(--p2) 100%);}
+  #bg::after{content:''; position:absolute; inset:0;
+    background-image:radial-gradient(rgba(255,255,255,.05) 1px, transparent 1.2px);
+    background-size:16px 16px;}
+  #cityscape{position:fixed; inset:0; z-index:-1; pointer-events:none;}
+
+  .bar{position:fixed; left:0; right:0; display:flex; gap:8px; align-items:center;
+    padding:10px 12px; z-index:20; flex-wrap:wrap;}
+  #top{top:0; justify-content:space-between;}
+  #bottom{bottom:0; justify-content:center; background:linear-gradient(0deg,rgba(20,18,16,.85),transparent);}
+
+  .title{color:var(--paper); font-size:20px; letter-spacing:1px; text-transform:uppercase;
+    text-shadow:2px 2px 0 var(--hit);}
+  .sub{color:var(--hit2); font-size:12px; font-weight:800; letter-spacing:.3px; margin-top:2px;}
+  #tallywrap{color:var(--paper); font-size:11px; font-weight:800; margin-top:4px;}
+  #tally{color:var(--hit2); font-size:18px;}
+
+  button,label.btn{border:3px solid var(--line); background:var(--hit2); color:var(--ink);
+    font:800 13px/1 "Arial Black",sans-serif; text-transform:uppercase; letter-spacing:.5px;
+    padding:10px 12px; cursor:pointer; box-shadow:3px 3px 0 var(--ink);
+    transition:transform .05s, box-shadow .05s;}
+  button:active,label.btn:active{transform:translate(3px,3px); box-shadow:0 0 0 var(--ink);}
+  button:focus-visible,label.btn:focus-visible,input:focus-visible,textarea:focus-visible{
+    outline:3px solid var(--hit); outline-offset:2px;}
+  .btn.alt{background:var(--panel);}
+  input[type=file]{position:absolute; width:1px; height:1px; opacity:0;}
+
+  #nav{display:flex; gap:6px;}
+  .tab{background:var(--panel); font-size:16px; padding:8px 12px;}
+  .tab.on{background:var(--hit); color:var(--paper);}
+
+  #cropper{position:fixed; z-index:21; left:12px; top:96px; background:var(--panel);
+    border:3px solid var(--line); box-shadow:4px 4px 0 var(--ink); padding:10px; width:190px; display:none;}
+  #cropper.show{display:block;}
+  #cropper h3{margin:0 0 8px; font-size:12px; text-transform:uppercase;}
+  #cropper label{display:block; font-size:10px; font-weight:800; margin:8px 0 2px; text-transform:uppercase;}
+  #cropper input[type=range]{width:100%; accent-color:var(--hit);}
+  #cropper .row{display:flex; gap:6px; margin-top:10px;}
+  #cropper .row button{flex:1; font-size:11px; padding:8px 4px;}
+
+  .burst{position:fixed; z-index:22; pointer-events:none;
+    transform:translate(-50%,-50%) rotate(var(--r)); font-size:var(--s); color:var(--hit);
+    -webkit-text-stroke:2px var(--ink); text-transform:uppercase;
+    font-family:"Arial Black",Impact,sans-serif; animation:pop .55s ease-out forwards;}
+  @keyframes pop{0%{transform:translate(-50%,-50%) rotate(var(--r)) scale(.2);opacity:0;}
+    35%{opacity:1;transform:translate(-50%,-50%) rotate(var(--r)) scale(1.15);}
+    100%{opacity:0;transform:translate(-50%,-50%) rotate(var(--r)) scale(1);}}
+  @media (prefers-reduced-motion: reduce){.burst{animation-duration:.25s;}}
+
+  /* ---------- BUILD / FURNITURE MENU ---------- */
+  #furniture{position:fixed; z-index:21; left:12px; right:12px; bottom:70px; background:var(--panel);
+    border:3px solid var(--line); box-shadow:4px 4px 0 var(--ink); padding:10px;
+    display:none; grid-template-columns:repeat(3,1fr); gap:8px;}
+  #furniture.show{display:grid;}
+  #furniture button{background:var(--hit2); font-size:12px; padding:12px 6px; box-shadow:2px 2px 0 var(--ink);}
+  #furniture button.wide{grid-column:1/-1; background:var(--panel);}
+  body.view-diary #furniture{display:none;}
+
+  /* ---------- ABOUT / PORTAL (translucent starfield) ---------- */
+  #about{position:fixed; inset:0; z-index:16; display:none; flex-direction:column;
+    padding:100px 20px 28px; overflow-y:auto; color:var(--paper);
+    background:
+      radial-gradient(1.6px 1.6px at 18% 24%, rgba(255,255,255,.85), transparent),
+      radial-gradient(1.4px 1.4px at 72% 18%, rgba(255,255,255,.7), transparent),
+      radial-gradient(1px 1px at 42% 64%, rgba(255,255,255,.55), transparent),
+      radial-gradient(1.5px 1.5px at 86% 55%, rgba(255,255,255,.7), transparent),
+      radial-gradient(1.2px 1.2px at 55% 40%, rgba(255,255,255,.75), transparent),
+      radial-gradient(1px 1px at 12% 78%, rgba(255,255,255,.5), transparent),
+      radial-gradient(1px 1px at 92% 84%, rgba(255,255,255,.55), transparent),
+      radial-gradient(1px 1px at 30% 12%, rgba(255,255,255,.5), transparent),
+      radial-gradient(1.3px 1.3px at 63% 88%, rgba(255,255,255,.6), transparent),
+      rgba(16,14,12,0.62);
+    backdrop-filter:blur(2px); -webkit-backdrop-filter:blur(2px);}
+  body.view-about #about{display:flex;}
+  body.view-about #bottom, body.view-about #cropper, body.view-about #tallywrap,
+  body.view-about #furniture{display:none;}
+  #about h2{font-size:22px; letter-spacing:1px; text-transform:uppercase; margin:0 0 12px;
+    text-shadow:2px 2px 0 var(--hit);}
+  #about p,#about li{font-family:"Helvetica Neue",Arial,sans-serif; font-size:15px; line-height:1.6; font-weight:500;}
+  #about .lead{font-size:16px;}
+  #about ul{padding-left:18px; margin:10px 0;}
+  #about li{margin:6px 0;}
+  #about strong{color:var(--hit2);}
+  #about .personal{border:2px dashed rgba(242,233,216,.5); padding:12px 14px; margin-top:18px;
+    font-style:italic; background:rgba(255,255,255,.05); font-family:"Helvetica Neue",Arial,sans-serif;
+    font-size:15px; line-height:1.6;}
+  #about .disc{font-size:12px; opacity:.8; margin-top:18px; line-height:1.5;
+    font-family:"Helvetica Neue",Arial,sans-serif;}
+
+  /* ---------- RAGE DIARY ---------- */
+  #diary{position:fixed; inset:0; z-index:15; background:var(--paper);
+    display:none; flex-direction:column; padding:96px 14px 14px;}
+  body.view-diary #diary{display:flex;}
+  body.view-diary #bottom, body.view-diary #cropper, body.view-diary #tallywrap{display:none;}
+  #diary .note{font-size:11px; font-weight:800; color:var(--ink); background:var(--hit2);
+    border:3px dashed var(--line); padding:8px 10px; margin-bottom:10px; line-height:1.4;
+    text-transform:uppercase;}
+  #people{display:flex; gap:6px; flex-wrap:wrap; margin-bottom:8px;}
+  .chip{border:3px solid var(--line); background:var(--panel); padding:7px 10px; font-size:12px;
+    font-weight:800; cursor:pointer; box-shadow:2px 2px 0 var(--ink);}
+  .chip.on{background:var(--hit); color:var(--paper);}
+  #addrow{display:flex; gap:6px; margin-bottom:10px;}
+  #newname{flex:1; border:3px solid var(--line); padding:9px; font-size:14px; font-weight:700;
+    background:var(--panel);}
+  #thread{flex:1; overflow-y:auto; border:3px solid var(--line); background:var(--panel);
+    padding:10px; margin-bottom:10px;}
+  .bub{max-width:82%; padding:9px 11px; margin:6px 0; font-family:"Helvetica Neue",Arial,sans-serif;
+    font-size:14px; font-weight:600; line-height:1.4; border:2px solid var(--line);}
+  .bub.you{margin-left:auto; background:var(--hit); color:var(--paper); border-color:var(--ink);}
+  .bub.them{margin-right:auto; background:var(--paper);}
+  .bub .who{display:block; font-size:9px; font-weight:800; text-transform:uppercase; opacity:.7; margin-bottom:2px;}
+  #composer{display:flex; gap:6px;}
+  #msg{flex:1; border:3px solid var(--line); padding:10px; font-size:15px; font-weight:600;
+    background:var(--panel); resize:none; font-family:"Helvetica Neue",Arial,sans-serif; height:48px;}
+  #empty{opacity:.55; font-size:13px; font-weight:700; text-align:center; margin-top:20px;
+    font-family:"Helvetica Neue",Arial,sans-serif;}
+</style>
+</head>
+<body class="view-punch">
+<div id="bg"></div>
+<svg id="cityscape" viewBox="0 0 800 600" preserveAspectRatio="xMidYMax slice" xmlns="http://www.w3.org/2000/svg">
+  <!-- clouds, far, faint -->
+  <g id="clouds" fill="#3a2c63" opacity="0.35">
+    <ellipse cx="120" cy="90" rx="70" ry="22"/>
+    <ellipse cx="165" cy="78" rx="50" ry="18"/>
+    <ellipse cx="620" cy="60" rx="85" ry="24"/>
+    <ellipse cx="670" cy="48" rx="55" ry="18"/>
+  </g>
+  <!-- far buildings -->
+  <g id="farBuildings" fill="#261d47" opacity="0.55">
+    <rect x="20"  y="300" width="70" height="300"/>
+    <rect x="100" y="260" width="55" height="340"/>
+    <rect x="640" y="280" width="65" height="320"/>
+    <rect x="715" y="240" width="60" height="360"/>
+    <rect x="300" y="320" width="50" height="280"/>
+  </g>
+  <!-- mid buildings -->
+  <g id="midBuildings" fill="#1a1330" opacity="0.7">
+    <rect x="-10" y="380" width="90" height="220"/>
+    <rect x="170" y="340" width="80" height="260"/>
+    <rect x="560" y="360" width="90" height="240"/>
+    <rect x="690" y="330" width="100" height="270"/>
+  </g>
+  <!-- window dots -->
+  <g fill="#584487" opacity="0.4">
+    <rect x="185" y="360" width="6" height="8"/><rect x="205" y="360" width="6" height="8"/>
+    <rect x="185" y="385" width="6" height="8"/><rect x="205" y="385" width="6" height="8"/>
+    <rect x="575" y="380" width="6" height="8"/><rect x="595" y="380" width="6" height="8"/>
+    <rect x="705" y="350" width="6" height="8"/><rect x="725" y="350" width="6" height="8"/>
+  </g>
+  <!-- shrubs -->
+  <g fill="#0d0a17" opacity="0.85">
+    <ellipse cx="60"  cy="595" rx="55" ry="26"/>
+    <ellipse cx="150" cy="600" rx="70" ry="24"/>
+    <ellipse cx="650" cy="598" rx="60" ry="26"/>
+    <ellipse cx="740" cy="595" rx="65" ry="24"/>
+  </g>
+  <!-- trees, front -->
+  <g id="trees" opacity="0.9">
+    <rect x="55" y="480" width="10" height="90" fill="#0d0a17"/>
+    <circle cx="60" cy="470" r="42" fill="#1a1330"/>
+    <rect x="735" y="470" width="10" height="100" fill="#0d0a17"/>
+    <circle cx="740" cy="455" r="48" fill="#1a1330"/>
+  </g>
+</svg>
+<div id="stage" aria-label="Punch zone. Tap or drag the doll." role="application"></div>
+
+<div class="bar" id="top">
+  <div>
+    <div class="title">Jan Boi's Ragedoll</div>
+    <!-- ⬇⬇ EDIT THIS LINE any time to change the message / quote at the top ⬇⬇ -->
+    <div class="sub" id="quote">Give the mf what they deserve 💛</div>
+    <div id="tallywrap">HITS <span id="tally">0</span></div>
+  </div>
+  <div id="nav">
+    <button class="tab on" data-view="punch" aria-label="Punch screen">👊</button>
+    <button class="tab" data-view="diary" aria-label="Rage diary screen">📓</button>
+    <button class="tab" data-view="about" aria-label="About this portal">✦</button>
+  </div>
+</div>
+
+<div id="cropper" aria-label="Face position controls">
+  <h3>Fit the face</h3>
+  <label for="zoom">Zoom</label><input id="zoom" type="range" min="0.4" max="10.5" step="0.01" value="1">
+  <label for="px">Left / Right</label><input id="px" type="range" min="-80" max="80" step="1" value="0">
+  <label for="py">Up / Down</label><input id="py" type="range" min="-80" max="80" step="1" value="0">
+  <div class="row">
+    <button id="done" class="btn">Done</button>
+    <button id="clearface" class="btn alt">Clear</button>
+  </div>
+</div>
+
+<div class="bar" id="bottom">
+  <label class="btn" for="face">＋ Face</label>
+  <input id="face" type="file" accept="image/*">
+  <button id="punchKb" class="btn alt" aria-label="Punch the doll">👊 Punch</button>
+  <button id="build" class="btn alt" aria-label="Add objects to the scene">☰ Add</button>
+  <button id="mute" class="btn alt" aria-pressed="false">🔊 Sound</button>
+  <button id="reset" class="btn alt">↺ Reset</button>
+</div>
+
+<div id="furniture" aria-label="Add objects to the scene">
+  <button data-prop="crate">📦 Crate</button>
+  <button data-prop="barrel">🛢️ Barrel</button>
+  <button data-prop="chair">🪑 Chair</button>
+  <button data-prop="table">🪵 Table</button>
+  <button data-prop="wall">🧱 Wall</button>
+  <button data-prop="platform">➖ Platform</button>
+  <button data-prop="cactus">🌵 Cactus</button>
+  <button id="clearprops" class="wide">🧹 Clear objects</button>
+</div>
+
+<!-- ---------------- ABOUT / PORTAL ---------------- -->
+<div id="about" aria-label="About this portal">
+  <!-- ⬇⬇ EDIT anything below to make this note your own ⬇⬇ -->
+  <h2>In Case Your Brain Is Tired ✦</h2>
+  <p class="lead">This is a simulated space to give those assholes what they deserve.</p>
+  <p>Two ways to let it go:</p>
+  <ul>
+    <li><strong>👊 Punch</strong> — Put in their image and smack it. Smack it into furniture. Fling barrels at them. Throw a chair. Hang them on the platform and hit the fucker with a plant. 
+    I know hitting isn't always enough. And talking to them directly could wreck your life. So here's the alternate. </li>
+    <li><strong>📓 Diary</strong> — Write them what you can't say to their face—the things they actually deserve to hear without destroying your own life or going to jail (because I need you on the outside).</li>
+  </ul>
+  <div class="personal">I built this for you, and I'll keep building it. More galis, more sounds, more weapons, more diary options, just Tell me and i'll add. Alsoo you can add multiple people to write to in the rage diary, cause there are soo many idiots 💛</div>
+  <p class="disc">Let it out. Therapy helps, but I hope this helps too. Enjoy it. Happy birthday. Love you.</p>
+</div>
+
+<!-- ---------------- RAGE DIARY ---------------- -->
+<div id="diary">
+  <div class="note">July is here..but whats the point if i can't be with ju and ly next to you ....Happy Birthday <3 tehehe</div>
+  <div id="addrow">
+    <input id="newname" type="text" placeholder="Add a name…" aria-label="New person name">
+    <button id="addperson" class="btn">Add</button>
+  </div>
+  <div id="people"></div>
+  <div id="thread"><div id="empty">Add someone, pick their name, then let it out.</div></div>
+  <div id="composer">
+    <textarea id="msg" placeholder="Say the thing you can't say…" aria-label="Your message"></textarea>
+    <button id="send" class="btn">Send</button>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
+<script>
+const { Engine, Render, Runner, Bodies, Body, Composite, Constraint, Mouse, MouseConstraint, Events, Vector } = Matter;
+const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const stage = document.getElementById('stage');
+let W = innerWidth, H = innerHeight;
+
+const engine = Engine.create(); engine.gravity.y = 1;
+const render = Render.create({ element:stage, engine,
+  options:{ width:W, height:H, wireframes:false, background:'transparent', pixelRatio:devicePixelRatio||1 }});
+Render.run(render);
+// force transparent canvas clear
+Events.on(render, 'beforeRender', ()=>{
+  render.context.clearRect(0, 0, render.canvas.width, render.canvas.height);
+});
+Runner.run(Runner.create(), engine);
+
+const wallOpts = { isStatic:true, render:{ fillStyle:'#141210' } };
+let floor,lWall,rWall,ceil;
+function buildWalls(){ const t=80;
+  floor=Bodies.rectangle(W/2,H+t/2-40,W*2,t,wallOpts);
+  ceil =Bodies.rectangle(W/2,-t/2-200,W*2,t,wallOpts);
+  lWall=Bodies.rectangle(-t/2,H/2,t,H*3,wallOpts);
+  rWall=Bodies.rectangle(W+t/2,H/2,t,H*3,wallOpts);
+  Composite.add(engine.world,[floor,ceil,lWall,rWall]); }
+buildWalls();
+
+const SKIN='#e0b48c', SKIN_D='#c99770', CLOTH='#BF40BF', CLOTH_D='#993299', SHOE='#20222a';
+let doll={};
+function makeDoll(cx,cy){
+  const group=Body.nextGroup(true);
+  const part=(x,y,w,h,fill,extra={})=>Bodies.rectangle(x,y,w,h,{
+    collisionFilter:{group}, chamfer:{radius:Math.min(w,h)*0.42},
+    render:{fillStyle:fill, strokeStyle:'#141210', lineWidth:2}, ...extra});
+  const circ=(x,y,r,fill,extra={})=>Bodies.circle(x,y,r,{
+    collisionFilter:{group}, render:{fillStyle:fill, strokeStyle:'#141210', lineWidth:2}, ...extra});
+
+  const head =circ(cx,cy-96,32,SKIN,{label:'head'});
+  const neck =part(cx,cy-64,20,16,SKIN_D);
+  const chest=part(cx,cy-28,60,72,CLOTH,{label:'chest'});
+  const hips =part(cx,cy+32,52,42,CLOTH_D);
+  const armL =part(cx-46,cy-32,20,62,SKIN);
+  const armR =part(cx+46,cy-32,20,62,SKIN);
+  const handL=circ(cx-46,cy+4,12,SKIN_D);
+  const handR=circ(cx+46,cy+4,12,SKIN_D);
+  const legL =part(cx-15,cy+90,24,72,'#242833');
+  const legR =part(cx+15,cy+90,24,72,'#242833');
+  const footL=part(cx-15,cy+132,30,14,SHOE,{chamfer:{radius:6}});
+  const footR=part(cx+15,cy+132,30,14,SHOE,{chamfer:{radius:6}});
+
+  const link=(a,b,ax,ay,bx,by,stiff=0.85)=>Constraint.create({
+    bodyA:a,bodyB:b,pointA:{x:ax,y:ay},pointB:{x:bx,y:by},stiffness:stiff,length:0,render:{visible:false}});
+  const joints=[
+    link(head,neck,0,26,0,-8), link(neck,chest,0,8,0,-36),
+    link(chest,hips,0,36,0,-21),
+    link(chest,armL,-26,-28,0,-31), link(chest,armR,26,-28,0,-31),
+    link(armL,handL,0,31,0,-12), link(armR,handR,0,31,0,-12),
+    link(hips,legL,-13,21,0,-36), link(hips,legR,13,21,0,-36),
+    link(legL,footL,0,36,0,-7), link(legR,footR,0,36,0,-7),
+  ];
+  const parts=[head,neck,chest,hips,armL,armR,handL,handR,legL,legR,footL,footR];
+  parts.forEach(p=>{p.restitution=0.25;p.friction=0.7;p.frictionAir=0.02;});
+  footL.friction=footR.friction=1; footL.frictionStatic=footR.frictionStatic=2;
+  Composite.add(engine.world,[...parts,...joints]);
+  return {parts,joints,head,neck,chest,hips,legL,legR,footL,footR};
+}
+function spawnY(){ return H-190; }
+doll=makeDoll(W/2,spawnY());
+
+// soft ground shadow
+Events.on(render,'afterRender',()=>{
+  if(!doll||!doll.hips) return;
+  const ctx=render.context, groundY=H-40, dx=doll.hips.position.x;
+  ctx.save();
+  const g=ctx.createRadialGradient(dx,groundY,4,dx,groundY,90);
+  g.addColorStop(0,'rgba(0,0,0,0.35)'); g.addColorStop(1,'rgba(0,0,0,0)');
+  ctx.fillStyle=g; ctx.beginPath(); ctx.ellipse(dx,groundY,90,18,0,0,Math.PI*2); ctx.fill();
+  ctx.restore();
+});
+
+// balance: stand at rest, topple when hit, stay down until reset
+Events.on(engine,'beforeUpdate',()=>{
+  if(!doll||!doll.chest) return;
+  const c=doll.chest,h=doll.head,hp=doll.hips;
+  const speed=Math.hypot(c.velocity.x,c.velocity.y);
+  if(h.position.y < hp.position.y-20 && speed<2.2){
+    for(const b of [c,h,hp]){ Body.setAngle(b,b.angle*0.85); Body.setAngularVelocity(b,b.angularVelocity*0.5); }
+    for(const b of doll.parts) Body.setVelocity(b,{x:b.velocity.x*0.7,y:b.velocity.y});
+  }
+});
+
+// ---- face overlay (local only) ----
+let faceImg=null; const faceCfg={zoom:1,px:0,py:0};
+const fileInput=document.getElementById('face');
+function loadFace(file){
+  if(!file||!file.type.startsWith('image/')) return;
+  const r=new FileReader();
+  r.onload=ev=>{ const img=new Image(); img.onload=()=>{ faceImg=img;
+    faceCfg.zoom=1;faceCfg.px=0;faceCfg.py=0;
+    zoom.value=1;px.value=0;py.value=0;
+    document.getElementById('cropper').classList.add('show'); }; img.src=ev.target.result; };
+  r.readAsDataURL(file);
+}
+fileInput.addEventListener('change',e=>loadFace(e.target.files[0]));
+['dragover','drop'].forEach(t=>addEventListener(t,e=>e.preventDefault()));
+addEventListener('drop',e=>{ if(e.dataTransfer.files[0]) loadFace(e.dataTransfer.files[0]); });
+const zoom=document.getElementById('zoom'),px=document.getElementById('px'),py=document.getElementById('py');
+zoom.oninput=e=>faceCfg.zoom=+e.target.value;
+px.oninput=e=>faceCfg.px=+e.target.value;
+py.oninput=e=>faceCfg.py=+e.target.value;
+document.getElementById('done').onclick=()=>document.getElementById('cropper').classList.remove('show');
+document.getElementById('clearface').onclick=()=>{faceImg=null;document.getElementById('cropper').classList.remove('show');};
+
+Events.on(render,'afterRender',()=>{
+  if(!faceImg) return;
+  const ctx=render.context,h=doll.head,r=h.circleRadius;
+  ctx.save(); ctx.translate(h.position.x,h.position.y); ctx.rotate(h.angle);
+  ctx.beginPath();ctx.arc(0,0,r,0,Math.PI*2);ctx.clip();
+  const s=((r*2)/Math.min(faceImg.width,faceImg.height))*faceCfg.zoom;
+  const dw=faceImg.width*s,dh=faceImg.height*s;
+  ctx.drawImage(faceImg,-dw/2+faceCfg.px,-dh/2+faceCfg.py,dw,dh);
+  ctx.lineWidth=3;ctx.strokeStyle='#141210';ctx.beginPath();ctx.arc(0,0,r,0,Math.PI*2);ctx.stroke();
+  ctx.restore();
+});
+
+/* ══════════════ AUDIO FILES TO UPLOAD ══════════════
+   Put these .mp3 files in the SAME folder as index.html.
+   All are OPTIONAL — any that are missing are simply skipped
+   (you'll still hear the built-in synth thump until you add them).
+   VOICES  : ouch.mp3 · oof.mp3 · ow.mp3 · argh.mp3
+   IMPACTS : punch.mp3 · whack.mp3 · thud.mp3
+   Add more by dropping the filename into the lists below.
+   ═══════════════════════════════════════════════════ */
+const AUDIO = {
+  voices : ['ouch.mp3','oof.mp3','ow.mp3','argh.mp3'],
+  impacts: ['punch.mp3','whack.mp3','thud.mp3'],
+};
+const _pool={};
+[...AUDIO.voices,...AUDIO.impacts].forEach(f=>{ const a=new Audio(f); a.preload='auto'; _pool[f]=a; });
+function playClip(list){ if(!list.length) return;
+  const f=list[Math.random()*list.length|0];
+  try{ const a=_pool[f].cloneNode(); a.volume=0.9; a.play().catch(()=>{}); }catch(e){} }
+
+let muted=false, audioCtx=null;
+function ac(){ if(!audioCtx) audioCtx=new (window.AudioContext||window.webkitAudioContext)(); return audioCtx; }
+function thwack(power){ if(muted) return;
+  const c=ac(),t=c.currentTime;
+  const o=c.createOscillator(),g=c.createGain();
+  o.type='triangle'; o.frequency.setValueAtTime(160+power*120,t);
+  o.frequency.exponentialRampToValueAtTime(50,t+0.14);
+  g.gain.setValueAtTime(Math.min(0.9,0.3+power),t); g.gain.exponentialRampToValueAtTime(0.001,t+0.16);
+  o.connect(g).connect(c.destination); o.start(t); o.stop(t+0.16);
+  const buf=c.createBuffer(1,1200,c.sampleRate),d=buf.getChannelData(0);
+  for(let i=0;i<d.length;i++) d[i]=(Math.random()*2-1)*(1-i/d.length);
+  const n=c.createBufferSource(),ng=c.createGain();
+  n.buffer=buf; ng.gain.setValueAtTime(0.25+power*0.3,t); ng.gain.exponentialRampToValueAtTime(0.001,t+0.1);
+  n.connect(ng).connect(c.destination); n.start(t);
+}
+function hitSound(power){ if(muted) return; thwack(power); playClip(AUDIO.impacts); playClip(AUDIO.voices); }
+document.getElementById('mute').onclick=function(){ muted=!muted;
+  this.setAttribute('aria-pressed',muted); this.textContent=muted?'🔇 Muted':'🔊 Sound'; };
+
+const words=['BKL!','MADAR!','CHU!','BSDK!'];
+function burst(x,y,power){ const el=document.createElement('div'); el.className='burst';
+  el.textContent=words[Math.random()*words.length|0];
+  el.style.setProperty('--r',(Math.random()*30-15)+'deg');
+  el.style.setProperty('--s',(28+power*34)+'px');
+  el.style.left=x+'px'; el.style.top=y+'px'; document.body.appendChild(el);
+  setTimeout(()=>el.remove(),reduceMotion?260:560); }
+
+let tally=0; const tallyEl=document.getElementById('tally');
+function registerHit(x,y,power){ tally++; tallyEl.textContent=tally; burst(x,y,power); hitSound(power); }
+
+const mouse=Mouse.create(render.canvas); mouse.pixelRatio=render.options.pixelRatio;
+const mc=MouseConstraint.create(engine,{mouse,constraint:{stiffness:0.2,render:{visible:false}}});
+Composite.add(engine.world,mc);
+let downAt=null,downTime=0,grabbed=null;
+Events.on(mc,'mousedown',()=>{ downAt={...mouse.position}; downTime=performance.now(); grabbed=mc.body; });
+Events.on(mc,'mouseup',()=>{
+  const dt=performance.now()-downTime;
+  const moved=downAt?Vector.magnitude(Vector.sub(mouse.position,downAt)):0;
+  if(grabbed&&dt<260&&moved<14){
+    const dir=Vector.normalise(Vector.sub(grabbed.position,{x:mouse.position.x,y:mouse.position.y+40}));
+    Body.applyForce(grabbed,mouse.position,Vector.mult(dir,0.16*grabbed.mass));
+    Body.setAngularVelocity(grabbed,(Math.random()-0.5)*0.6);
+    registerHit(mouse.position.x,mouse.position.y,0.9);
+  }
+  grabbed=null; downAt=null;
+});
+Events.on(engine,'afterUpdate',()=>{
+  if(mc.body){ const v=Vector.magnitude(mc.body.velocity);
+    if(v>18&&performance.now()-(mc.body._lastBurst||0)>300){
+      mc.body._lastBurst=performance.now();
+      registerHit(mc.body.position.x,mc.body.position.y,Math.min(1.2,v/30)); } }
+});
+
+document.getElementById('punchKb').onclick=doKbPunch;
+function doKbPunch(){ const h=doll.head;
+  Body.applyForce(h,h.position,{x:(Math.random()-0.5)*0.05,y:-0.05*h.mass});
+  Body.setAngularVelocity(h,(Math.random()-0.5)*0.8);
+  registerHit(h.position.x,h.position.y,0.9); }
+addEventListener('keydown',e=>{ const h=doll.head;
+  if(e.code==='Space'){e.preventDefault();doKbPunch();}
+  if(e.key==='ArrowLeft') Body.applyForce(h,h.position,{x:-0.04*h.mass,y:-0.02*h.mass});
+  if(e.key==='ArrowRight')Body.applyForce(h,h.position,{x: 0.04*h.mass,y:-0.02*h.mass});
+  if(e.key==='ArrowUp')   Body.applyForce(h,h.position,{x:0,y:-0.06*h.mass}); });
+
+document.getElementById('reset').onclick=()=>{
+  Composite.clear(engine.world,false); buildWalls();
+  doll=makeDoll(W/2,spawnY()); Composite.add(engine.world,mc); props.length=0; };
+addEventListener('resize',()=>{ W=innerWidth;H=innerHeight;
+  render.canvas.width=W*render.options.pixelRatio; render.canvas.height=H*render.options.pixelRatio;
+  render.options.width=W; render.options.height=H;
+  render.canvas.style.width=W+'px'; render.canvas.style.height=H+'px'; });
+
+/* ══════════════ BUILD / FURNITURE ══════════════ */
+const props=[];
+function addProp(b){ props.push(b); Composite.add(engine.world,b); }
+const WOOD='#8a5a2b', STONE='#5a5550';
+function spawnProp(type){
+  const cx=W*0.5, topY=140; let b;
+  if(type==='crate'){
+    b=Bodies.rectangle(cx,topY,64,64,{restitution:.2,friction:.6,render:{fillStyle:'#b5793a'}});
+  } else if(type==='barrel'){
+    b=Bodies.circle(cx,topY,34,{restitution:.4,friction:.5,render:{fillStyle:'#6b7076'}});
+  } else if(type==='chair'){
+    const r={fillStyle:WOOD};
+    const seat=Bodies.rectangle(cx,topY,70,16,{render:r}),
+          back=Bodies.rectangle(cx-27,topY-30,16,60,{render:r}),
+          l1=Bodies.rectangle(cx-25,topY+28,12,40,{render:r}),
+          l2=Bodies.rectangle(cx+25,topY+28,12,40,{render:r});
+    b=Body.create({parts:[seat,back,l1,l2],friction:.6,restitution:.1});
+  } else if(type==='table'){
+    const r={fillStyle:WOOD};
+    const top=Bodies.rectangle(cx,topY,150,18,{render:r}),
+          l1=Bodies.rectangle(cx-60,topY+34,14,50,{render:r}),
+          l2=Bodies.rectangle(cx+60,topY+34,14,50,{render:r});
+    b=Body.create({parts:[top,l1,l2],friction:.6,restitution:.1});
+  } else if(type==='cactus'){
+    const r={fillStyle:'#4a7c3f'};
+    const body=Bodies.rectangle(cx,topY,26,90,{render:r}),
+          arm1=Bodies.rectangle(cx-20,topY-15,14,40,{render:r}),
+          arm2=Bodies.rectangle(cx+20,topY+5,14,40,{render:r});
+    b=Body.create({parts:[body,arm1,arm2],friction:.5,restitution:.3});
+  } else if(type==='wall'){
+    b=Bodies.rectangle(W*0.26,H-190,40,300,{isStatic:true,render:{fillStyle:STONE}});
+  } else if(type==='platform'){
+    b=Bodies.rectangle(W*0.5,H*0.58,220,26,{isStatic:true,render:{fillStyle:STONE}});
+  }
+  if(b) addProp(b);
+}
+document.getElementById('build').onclick=()=>document.getElementById('furniture').classList.toggle('show');
+document.querySelectorAll('#furniture [data-prop]').forEach(btn=>
+  btn.onclick=()=>spawnProp(btn.dataset.prop));
+document.getElementById('clearprops').onclick=()=>{
+  props.forEach(b=>Composite.remove(engine.world,b)); props.length=0; };
+
+/* ══════════════ RAGE DIARY ══════════════ */
+// safe storage: persists when hosted, falls back to memory if blocked
+const mem={};
+const store={
+  get(k,d){ try{ const v=localStorage.getItem(k); return v?JSON.parse(v):d; }catch(e){ return k in mem?mem[k]:d; } },
+  set(k,v){ try{ localStorage.setItem(k,JSON.stringify(v)); }catch(e){ mem[k]=v; } }
+};
+let people=store.get('rd_people',[]);
+let threads=store.get('rd_threads',{});
+let active=people[0]?people[0].id:null;
+
+const peopleEl=document.getElementById('people');
+const threadEl=document.getElementById('thread');
+const emptyMsg='<div id="empty">Add someone, pick their name, then let it out.</div>';
+
+function save(){ store.set('rd_people',people); store.set('rd_threads',threads); }
+function renderPeople(){
+  peopleEl.innerHTML='';
+  people.forEach(p=>{ const b=document.createElement('button');
+    b.className='chip'+(p.id===active?' on':''); b.textContent=p.name;
+    b.onclick=()=>{ active=p.id; renderPeople(); renderThread(); };
+    peopleEl.appendChild(b); });
+}
+function renderThread(){
+  const msgs=active?(threads[active]||[]):[];
+  if(!msgs.length){ threadEl.innerHTML=emptyMsg; return; }
+  const name=(people.find(p=>p.id===active)||{}).name||'';
+  threadEl.innerHTML='';
+  msgs.forEach(m=>{ const d=document.createElement('div');
+    d.className='bub '+m.who;
+    d.innerHTML='<span class="who">'+(m.who==='you'?'You':name)+'</span>'+escapeHtml(m.text);
+    threadEl.appendChild(d); });
+  threadEl.scrollTop=threadEl.scrollHeight;
+}
+function escapeHtml(s){ return s.replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+
+document.getElementById('addperson').onclick=addPerson;
+document.getElementById('newname').addEventListener('keydown',e=>{ if(e.key==='Enter') addPerson(); });
+function addPerson(){
+  const inp=document.getElementById('newname'); const name=inp.value.trim(); if(!name) return;
+  const id='p'+Date.now(); people.push({id,name}); threads[id]=[]; active=id; inp.value='';
+  save(); renderPeople(); renderThread();
+}
+
+document.getElementById('send').onclick=send;
+document.getElementById('msg').addEventListener('keydown',e=>{
+  if(e.key==='Enter'&&!e.shiftKey){ e.preventDefault(); send(); } });
+function send(){
+  const box=document.getElementById('msg'); const text=box.value.trim();
+  if(!text||!active) return;
+  threads[active].push({who:'you',text,ts:Date.now()});
+  const name=(people.find(p=>p.id===active)||{}).name||'';
+  const reply=apologyReply(name,text);
+  threads[active].push({who:'them',text:reply,ts:Date.now()+1});
+  box.value=''; save(); renderThread();
+}
+// local apology generator (no server / no API key)
+// replies pool (populated once at start)
+let _replyPool = [];
+let _replyIndex = 0;
+
+function shuffleReplies(){
+  const validation=[
+    "You were right to be angry.",
+    "Your anger makes complete sense. I am sorry",
+    "You're not overreacting. I failed you.",
+    "That wasn't okay, and you are right"
+  ];
+  const accountability=[
+    "I didn't see how much I was taking from you.",
+    "I chose myself over you, and that was cruel.",
+    "Sorry, I let you down."
+  ];
+  const worth=[
+    "You deserved to be treated well",
+    "You deserved honesty.",
+    "You deserved someone who could handle your honesty without punishing you."
+  ];
+  const permission=[
+    "Say everything you're thinking. You don't have to be gentle here.",
+    "Your resentment is fair. You should hate this.",
+    "Don't soften it for my sake. I deserve to hear it unfiltered.",
+    "You don't owe me grace."
+  ];
+  const release=[
+    "You were never the problem. That's mine to sit with.",
+    "You can stop trying to make sense of my nonsense."
+  ];
+  const realTalk=[
+    "I wasted your time. That's on me, sorry.",
+    "I knew better and did it anyway. That's the worst part.",
+    "You shouldn't have had to ask me to be better. I should have just done it.",
+    "I'm sorry it took this long to say."
+  ];
+  
+  const all=[...validation,...accountability,...worth,...permission,...release,...realTalk];
+  // Fisher-Yates shuffle
+  for(let i=all.length-1;i>0;i--){
+    const j=Math.floor(Math.random()*(i+1));
+    [all[i],all[j]]=[all[j],all[i]];
+  }
+  _replyPool=all;
+  _replyIndex=0;
+}
+
+function apologyReply(name,text){
+  if(_replyPool.length===0) shuffleReplies();
+  const reply=_replyPool[_replyIndex];
+  _replyIndex++;
+  if(_replyIndex>=_replyPool.length) shuffleReplies();
+  return reply;
+}
+
+// initialize the pool at startup
+shuffleReplies();
+
+/* ══════════════ PARALLAX ══════════════ */
+let mouseScreenX = W/2, mouseScreenY = H/2;
+function updateMouse(x,y){ mouseScreenX=x; mouseScreenY=y; }
+addEventListener('mousemove', e=>updateMouse(e.clientX, e.clientY));
+addEventListener('touchmove', e=>{
+  if(e.touches[0]) updateMouse(e.touches[0].clientX, e.touches[0].clientY);
+}, {passive:true});
+
+function parallaxTick(){
+  const dx = (mouseScreenX - W/2) / W;
+  const dy = (mouseScreenY - H/2) / H;
+  const clouds       = document.getElementById('clouds');
+  const farBuildings  = document.getElementById('farBuildings');
+  const midBuildings  = document.getElementById('midBuildings');
+  const trees         = document.getElementById('trees');
+  if(clouds)       clouds.setAttribute('transform',       'translate('+(dx*-30)+','+(dy*-8)+')');
+  if(farBuildings) farBuildings.setAttribute('transform',  'translate('+(dx*-14)+','+(dy*-4)+')');
+  if(midBuildings) midBuildings.setAttribute('transform',  'translate('+(dx*-7)+','+(dy*-2)+')');
+  if(trees)        trees.setAttribute('transform',         'translate('+(dx*3)+','+(dy*1)+')');
+  requestAnimationFrame(parallaxTick);
+}
+parallaxTick();
+
+// ---- view switching ----
+document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>{
+  document.querySelectorAll('.tab').forEach(x=>x.classList.remove('on'));
+  t.classList.add('on');
+  const v=t.dataset.view;
+  document.body.className='view-'+v;
+  if(v==='diary'){ renderPeople(); renderThread(); }
+});
+
+renderPeople(); renderThread();
+</script>
+</body>
+</html>
