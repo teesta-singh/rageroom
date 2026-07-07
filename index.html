@@ -272,7 +272,7 @@ let W = innerWidth, H = innerHeight;
 
 const engine = Engine.create(); engine.gravity.y = 1;
 const render = Render.create({ element:stage, engine,
-  options:{ width:W, height:H, wireframes:false, background:'transparent', pixelRatio:devicePixelRatio||1 }});
+  options:{ width:W, height:H, wireframes:false, background:'', pixelRatio:devicePixelRatio||1 }});
 Render.run(render);
 // force transparent canvas clear
 Events.on(render, 'beforeRender', ()=>{
