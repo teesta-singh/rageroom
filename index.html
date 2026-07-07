@@ -3,6 +3,12 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta name="theme-color" content="#ff2e4d">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Ragedoll">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect fill='%23ffd23f' width='192' height='192'/><text x='50%' y='50%' font-size='100' font-weight='bold' text-anchor='middle' dominant-baseline='middle' fill='%23141210'>👊</text></svg>">
 <title>Jan Boi's Ragedoll</title>
 <style>
   :root{ --ink:#141210; --paper:#f2e9d8; --panel:#fbf5e6;
@@ -172,6 +178,7 @@
   <button data-prop="table">🪵 Table</button>
   <button data-prop="wall">🧱 Wall</button>
   <button data-prop="platform">➖ Platform</button>
+  <button data-prop="cactus">🌵 Cactus</button>
   <button id="clearprops" class="wide">🧹 Clear objects</button>
 </div>
 
@@ -182,16 +189,17 @@
   <p class="lead">This is a simulated space to give those assholes what they deserve.</p>
   <p>Two ways to let it go:</p>
   <ul>
-    <li><strong>👊 Punch</strong> — Put in their image and smack it. Smack it into furniture. Fling it into barrels. Throw a chair at it. Build walls around it and slam it into them. Hang it on the platform and hit it with a table. I know hitting isn't always enough. And talking to them directly could wreck your life. So here's the alternate. </li>
-    <li><strong>📓 Diary</strong> — Write them what you can't say to their face—the things they actually deserve to hear—without destroying your own life or going to jail (because I need you on the outside). Not as them, as someone actually listening.</li>
+    <li><strong>👊 Punch</strong> — Put in their image and smack it. Smack it into furniture. Fling barrels at them. Throw a chair. Hang them on the platform and hit the fucker with a plant. 
+    I know hitting isn't always enough. And talking to them directly could wreck your life. So here's the alternate. </li>
+    <li><strong>📓 Diary</strong> — Write them what you can't say to their face—the things they actually deserve to hear without destroying your own life or going to jail (because I need you on the outside).</li>
   </ul>
-  <div class="personal">I built this for you, and I'll keep building it. More galis, more sounds, more diary options, different kinds of replies. Alsoo you can add multiple people to write to in the rage diary cause there are soo many idiots 💛</div>
-  <p class="disc">Let it out. Therapy helps, but this helps too. Enjoy it. Happy birthday. Love you.</p>
+  <div class="personal">I built this for you, and I'll keep building it. More galis, more sounds, more weapons, more diary options, just Tell me and i'll add. Alsoo you can add multiple people to write to in the rage diary, cause there are soo many idiots 💛</div>
+  <p class="disc">Let it out. Therapy helps, but I hope this helps too. Enjoy it. Happy birthday. Love you.</p>
 </div>
 
 <!-- ---------------- RAGE DIARY ---------------- -->
 <div id="diary">
-  <div class="note">July is here..but whats the point if i can't be with ju and ly next to you ....tehehe</div>
+  <div class="note">July is here..but whats the point if i can't be with ju and ly next to you ....Happy Birthday <3 tehehe</div>
   <div id="addrow">
     <input id="newname" type="text" placeholder="Add a name…" aria-label="New person name">
     <button id="addperson" class="btn">Add</button>
@@ -412,6 +420,12 @@ function spawnProp(type){
           l1=Bodies.rectangle(cx-60,topY+34,14,50,{render:r}),
           l2=Bodies.rectangle(cx+60,topY+34,14,50,{render:r});
     b=Body.create({parts:[top,l1,l2],friction:.6,restitution:.1});
+  } else if(type==='cactus'){
+    const r={fillStyle:'#4a7c3f'};
+    const body=Bodies.rectangle(cx,topY,26,90,{render:r}),
+          arm1=Bodies.rectangle(cx-20,topY-15,14,40,{render:r}),
+          arm2=Bodies.rectangle(cx+20,topY+5,14,40,{render:r});
+    b=Body.create({parts:[body,arm1,arm2],friction:.5,restitution:.3});
   } else if(type==='wall'){
     b=Bodies.rectangle(W*0.26,H-190,40,300,{isStatic:true,render:{fillStyle:STONE}});
   } else if(type==='platform'){
@@ -482,18 +496,64 @@ function send(){
   box.value=''; save(); renderThread();
 }
 // local apology generator (no server / no API key)
-function apologyReply(name,text){
-  const t=text.toLowerCase();
-  const open=["I'm sorry, truly. ","You're right, and I'm sorry. ","I hear you. I'm sorry. ","I owe you an apology. "];
-  let mid;
-  if(/tired|exhaust|drain|burn|sleep/.test(t)) mid="You've been carrying so much, and I didn't see how tired it made you.";
-  else if(/angry|mad|furious|hate|rage/.test(t)) mid="Your anger makes complete sense. I'd feel it too.";
-  else if(/alone|ignored|unseen|nobody|invisible/.test(t)) mid="You shouldn't have had to feel alone in this.";
-  else if(/scared|anxious|afraid|worried/.test(t)) mid="It was never yours to hold by yourself.";
-  else mid="What you're feeling is valid, and it matters.";
-  const close=[" Thank you for telling me — you can put it down now."," You didn't deserve that. Rest."," I've got it from here. Breathe."];
-  return open[Math.random()*open.length|0]+mid+close[Math.random()*close.length|0];
+// replies pool (populated once at start)
+let _replyPool = [];
+let _replyIndex = 0;
+
+function shuffleReplies(){
+  const validation=[
+    "You were right to be angry.",
+    "Your anger makes complete sense. I am sorry",
+    "You're not overreacting. I failed you.",
+    "That wasn't okay, and you are right"
+  ];
+  const accountability=[
+    "I didn't see how much I was taking from you.",
+    "I chose myself over you, and that was cruel.",
+    "Sorry, I let you down."
+  ];
+  const worth=[
+    "You deserved to be treated well",
+    "You deserved honesty.",
+    "You deserved someone who could handle your honesty without punishing you."
+  ];
+  const permission=[
+    "Say everything you're thinking. You don't have to be gentle here.",
+    "Your resentment is fair. You should hate this.",
+    "Don't soften it for my sake. I deserve to hear it unfiltered.",
+    "You don't owe me grace."
+  ];
+  const release=[
+    "You were never the problem. That's mine to sit with.",
+    "You can stop trying to make sense of my nonsense."
+  ];
+  const realTalk=[
+    "I wasted your time. That's on me, sorry.",
+    "I knew better and did it anyway. That's the worst part.",
+    "You shouldn't have had to ask me to be better. I should have just done it.",
+    "I'm sorry it took this long to say."
+  ];
+  
+  const all=[...validation,...accountability,...worth,...permission,...release,...realTalk];
+  // Fisher-Yates shuffle
+  for(let i=all.length-1;i>0;i--){
+    const j=Math.floor(Math.random()*(i+1));
+    [all[i],all[j]]=[all[j],all[i]];
+  }
+  _replyPool=all;
+  _replyIndex=0;
 }
+
+function apologyReply(name,text){
+  if(_replyPool.length===0) shuffleReplies();
+  const reply=_replyPool[_replyIndex];
+  _replyIndex++;
+  if(_replyIndex>=_replyPool.length) shuffleReplies();
+  return reply;
+}
+
+// initialize the pool at startup
+shuffleReplies();
 
 // ---- view switching ----
 document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>{
