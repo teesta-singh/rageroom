@@ -216,7 +216,7 @@
   <label class="btn" for="face">＋ Face</label>
   <input id="face" type="file" accept="image/*">
   <button id="punchKb" class="btn alt" aria-label="Punch the doll">👊 Punch</button>
-  <button id="build" class="btn alt" aria-label="Add objects to the scene">☰ Add</button>
+  <button id="build" class="btn alt" aria-label="Add objects to the scene">☰ Weapons</button>
   <button id="mute" class="btn alt" aria-pressed="false">🔊 Sound</button>
   <button id="reset" class="btn alt">↺ Reset</button>
 </div>
@@ -229,6 +229,7 @@
   <button data-prop="wall">🧱 Wall</button>
   <button data-prop="platform">➖ Platform</button>
   <button data-prop="cactus">🌵 Cactus</button>
+  <button data-prop="knife">🔪 Knife</button>
   <button id="clearprops" class="wide">🧹 Clear objects</button>
 </div>
 
@@ -424,7 +425,7 @@ function hitSound(power){ if(muted) return; thwack(power); playClip(AUDIO.impact
 document.getElementById('mute').onclick=function(){ muted=!muted;
   this.setAttribute('aria-pressed',muted); this.textContent=muted?'🔇 Muted':'🔊 Sound'; };
 
-const words=['BKL!','MADAR!','CHU!','BSDK!'];
+const words=['BKL!','MADAR!','CHU!','BSDK!','Bhen ki!','LODU!'];
 function burst(x,y,power){ const el=document.createElement('div'); el.className='burst';
   el.textContent=words[Math.random()*words.length|0];
   el.style.setProperty('--r',(Math.random()*30-15)+'deg');
@@ -506,6 +507,11 @@ function spawnProp(type){
           arm1=Bodies.rectangle(cx-20,topY-15,14,40,{render:r}),
           arm2=Bodies.rectangle(cx+20,topY+5,14,40,{render:r});
     b=Body.create({parts:[body,arm1,arm2],friction:.5,restitution:.3});
+  } else if(type==='knife'){
+    const r={fillStyle:'#c0c0c0'};
+    const blade=Bodies.rectangle(cx,topY,12,80,{render:r, chamfer:{radius:4}}),
+          handle=Bodies.rectangle(cx,topY+52,18,30,{render:{fillStyle:'#5c3a1e'}, chamfer:{radius:6}});
+    b=Body.create({parts:[blade,handle],friction:.3,restitution:.2});
   } else if(type==='wall'){
     b=Bodies.rectangle(W*0.26,H-190,40,300,{isStatic:true,render:{fillStyle:STONE}});
   } else if(type==='platform'){
