@@ -348,8 +348,8 @@ Events.on(engine,'beforeUpdate',()=>{
   if(!doll||!doll.chest) return;
   const c=doll.chest,h=doll.head,hp=doll.hips;
   const speed=Math.hypot(c.velocity.x,c.velocity.y);
-  if(h.position.y < hp.position.y-20 && speed<2){
-    for(const b of [c,h,hp]){ Body.setAngle(b,b.angle*0.58); Body.setAngularVelocity(b,b.angularVelocity*0.5); }
+  if(h.position.y < hp.position.y-20 && speed<3){
+    for(const b of [c,h,hp]){ Body.setAngle(b,b.angle*0.38); Body.setAngularVelocity(b,b.angularVelocity*0.5); }
     for(const b of doll.parts) Body.setVelocity(b,{x:b.velocity.x*0.7,y:b.velocity.y});
   }
 });
